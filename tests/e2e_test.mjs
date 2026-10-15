@@ -1,4 +1,4 @@
-// End to end: a --test instance of MousePinch.exe, tagged SendInput from bin\drive.exe, a throwaway Chrome window.
+// End to end: a --test instance of ZoomScroller.exe, tagged SendInput from bin\drive.exe, a throwaway Chrome window.
 // Moves your real cursor onto the test window for ~30 s and puts it back at the end.
 import { spawn } from "node:child_process";
 import { join } from "node:path";
@@ -30,7 +30,7 @@ try {
   const cx = Math.round((L + R) / 2), cy = Math.round((T + B) / 2);
   console.log("page rect", L, T, R, B);
 
-  app = spawn(join(ROOT, "bin", "MousePinch.exe"), ["--test", "--seconds", "120"], { stdio: ["ignore", "pipe", "pipe"] });
+  app = spawn(join(ROOT, "bin", "ZoomScroller.exe"), ["--test", "--seconds", "120"], { stdio: ["ignore", "pipe", "pipe"] });
   app.stdout.on("data", d => log.push(...d.toString().trim().split(/\r?\n/)));
   for (let i = 0; i < 50 && !log.some(l => l.includes("ready")); i++) await sleep(100);
   check(log.some(l => l.includes("ready")), "test instance started");

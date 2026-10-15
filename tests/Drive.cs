@@ -2,9 +2,9 @@ using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace MousePinch
+namespace ZoomScroller
 {
-    /// <summary>Test driver: tagged SendInput (only a --test instance of Mouse Pinch acts on it).
+    /// <summary>Test driver: tagged SendInput (only a --test instance of ZoomScroller acts on it).
     ///   drive cursor                     print the cursor position
     ///   drive setcursor X Y
     ///   drive "at X Y; ctrl down; wheel 120; move 30 -20; sleep 50; ctrl up; key 43; click"

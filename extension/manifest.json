@@ -1,8 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "Mouse Pinch helper",
+  "name": "ZoomScroller helper",
   "version": "1.0.0",
-  "description": "Lets Mouse Pinch zoom every page: pages can no longer block its (touch) pinch with CSS touch-action. Touchpad and mouse are unaffected.",
+  "description": "Lets the ZoomScroller app pinch-zoom every page: sites can no longer block touch zoom with CSS. Mouse and touchpad unaffected.",
+  "homepage_url": "https://github.com/HaritMT25/zoomscroller",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],

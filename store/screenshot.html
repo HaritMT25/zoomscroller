@@ -1,0 +1,66 @@
+<!doctype html>
+<!-- The store screenshot (1280x800): store\render.ps1 turns it into screenshot-1280x800.png. -->
+<html><head><meta charset="utf-8"><style>
+  * { box-sizing: border-box; margin: 0; }
+  body { width: 1280px; height: 800px; overflow: hidden; font: 16px "Segoe UI", system-ui, sans-serif; color: #10233a;
+         background: linear-gradient(160deg, #eef6ff 0%, #f8fbff 55%, #e7f2ff 100%); padding: 48px 56px; }
+  header { display: flex; align-items: center; gap: 18px; }
+  header img { width: 64px; height: 64px; }
+  h1 { font-size: 40px; font-weight: 700; letter-spacing: -0.5px; }
+  .sub { font-size: 21px; color: #3b5470; margin-top: 2px; }
+  .pair { display: flex; gap: 40px; margin-top: 40px; }
+  .shot { flex: 1; }
+  .label { font-size: 17px; font-weight: 600; color: #3b5470; margin: 0 0 10px 4px; }
+  .label b { color: #0096ff; }
+  .win { height: 410px; border-radius: 12px; background: #fff; box-shadow: 0 10px 30px rgba(16,35,58,.14); overflow: hidden;
+         border: 1px solid #d6e2ef; position: relative; }
+  .bar { height: 36px; background: #e9eef4; display: flex; align-items: center; gap: 7px; padding: 0 14px; }
+  .bar i { width: 11px; height: 11px; border-radius: 50%; background: #c5cfda; }
+  .bar span { margin-left: 14px; height: 20px; width: 210px; border-radius: 6px; background: #fff; }
+  .view { position: absolute; top: 36px; left: 0; right: 0; bottom: 0; overflow: hidden; }
+  /* the zoom is about the cursor's tip (.cursor is placed so its tip sits at 55,272 in .view, under the caption) */
+  .page { position: absolute; inset: 0; padding: 26px 30px; transform-origin: 55px 272px; }
+  .zoomed .page { transform: scale(2.2); }
+  .page .t { height: 22px; width: 62%; background: #10233a; border-radius: 4px; }
+  .page .m { height: 10px; width: 38%; background: #9fb1c4; border-radius: 3px; margin-top: 12px; }
+  .row { display: flex; gap: 18px; margin-top: 22px; }
+  .img { width: 190px; height: 128px; border-radius: 8px; background: linear-gradient(135deg, #7cc4ff, #0096ff 60%, #0a5fb0); position: relative; }
+  .img::after { content: ""; position: absolute; left: 22px; bottom: 18px; width: 70px; height: 44px; background: #ffd166;
+                clip-path: polygon(0 100%, 45% 0, 100% 100%); }
+  .lines { flex: 1; }
+  .lines div { height: 9px; background: #c7d3df; border-radius: 3px; margin-bottom: 11px; }
+  .lines div:nth-child(3n) { width: 82%; } .lines div:nth-child(4n) { width: 91%; }
+  .small { width: 190px; font-size: 9px; line-height: 12px; color: #4a5f76; margin-top: 6px; }
+  .cursor { position: absolute; left: 53px; top: 306px; width: 22px; height: 32px; }
+  .keys { display: flex; gap: 16px; margin-top: 30px; }
+  .key { flex: 1; background: #fff; border: 1px solid #d6e2ef; border-radius: 10px; padding: 14px 18px; font-size: 17px; }
+  .key b { display: block; color: #0096ff; font-size: 15px; margin-bottom: 3px; }
+  .note { margin-top: 18px; font-size: 15px; color: #3b5470; }
+</style></head><body>
+  <header>
+    <img src="../extension/icons/icon128.png" alt="">
+    <div><h1>ZoomScroller</h1><div class="sub">Pinch-zoom any page with your mouse, the way a touchpad does</div></div>
+  </header>
+  <div class="pair">
+    <div class="shot"><div class="label">The page at 100%</div><div class="win"><div class="bar"><i></i><i></i><i></i><span></span></div>
+      <div class="view"><div class="page" id="p">
+        <div class="t"></div><div class="m"></div>
+        <div class="row"><div class="img"></div><div class="lines"><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div></div>
+        <div class="small">Fig. 1: small print you'd squint at is easy to read once you zoom in on it.</div>
+        <div class="row"><div class="lines"><div></div><div></div><div></div><div></div><div></div></div></div>
+      </div></div>
+      <svg class="cursor" viewBox="0 0 22 32"><path d="M2 2 L2 26 L8 20 L12 30 L16 28 L12 18 L20 18 Z" fill="#fff" stroke="#10233a" stroke-width="2" stroke-linejoin="round"/></svg>
+    </div></div>
+    <div class="shot"><div class="label"><b>Ctrl + wheel up:</b> zoomed in where the cursor is</div><div class="win zoomed"><div class="bar"><i></i><i></i><i></i><span></span></div>
+      <div class="view" id="z"></div>
+      <svg class="cursor" viewBox="0 0 22 32"><path d="M2 2 L2 26 L8 20 L12 30 L16 28 L12 18 L20 18 Z" fill="#fff" stroke="#10233a" stroke-width="2" stroke-linejoin="round"/></svg>
+    </div></div>
+  </div>
+  <div class="keys">
+    <div class="key"><b>Ctrl + wheel up</b>zoom in at the cursor</div>
+    <div class="key"><b>Ctrl + move the mouse</b>slide around the zoomed page</div>
+    <div class="key"><b>Ctrl + wheel down</b>zoom out, stopping at 100%</div>
+  </div>
+  <div class="note">This helper lets the free ZoomScroller app for Windows zoom on every site. It needs the app: github.com/HaritMT25/zoomscroller</div>
+  <script>document.getElementById("z").appendChild(document.getElementById("p").cloneNode(true));</script>
+</body></html>

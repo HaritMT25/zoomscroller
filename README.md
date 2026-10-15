@@ -1,4 +1,4 @@
-# Mouse Pinch
+# ZoomScroller
 
 Touchpad-style pinch zoom for Chrome and Edge with a mouse. It zooms **the page**, not the browser's
 zoom setting, it stops at 100%, it zooms where the cursor is, and you can move around while zoomed.
@@ -15,23 +15,42 @@ This is the zoom you get from two fingers on a touchpad.
 Ctrl + plus/minus still change the browser's own zoom. The tray icon (a magnifier) has the settings:
 on/off (double-click), zoom speed, drag direction, glide after letting go, start with Windows.
 
+## Install
+
+Windows 10 or 11, 64-bit. Made for Chrome and Edge; Brave is on its list too (`apps=` in the settings), but untested.
+
+1. Download `ZoomScroller-<version>.zip` from [Releases](https://github.com/HaritMT25/zoomscroller/releases/latest)
+   and unzip it into a folder you'll keep, e.g. `Documents\ZoomScroller`. The app starts with Windows from there.
+2. Run `ZoomScroller.exe`. The app isn't code-signed, so Windows may say "Windows protected your PC": click
+   **More info**, then **Run anyway**. A blue magnifier appears in the tray.
+3. Add the helper extension (next section).
+
+To uninstall: in the tray menu untick **Start with Windows** and click **Quit**, then delete the folder and
+`%APPDATA%\ZoomScroller`.
+
 ## The helper extension (recommended)
 
 Some sites forbid touch pinch-zoom with the CSS `touch-action` property. YouTube does it on its home
-grid, and the same rule also blocks touch scrolling one way. With the helper, Mouse Pinch can't be
+grid, and the same rule also blocks touch scrolling one way. With the helper, ZoomScroller can't be
 blocked; without it, zoom and drag do nothing on such parts of a page. The helper only resets
 `touch-action`. That property only ever affects touch input, so your mouse, touchpad and keyboard
-behave exactly as before.
+behave exactly as before. Chrome will say it can "read and change all your data on all websites": that's
+the standard warning for anything added to every page, here one CSS rule. It has no script and reads nothing.
 
 To install it in Chrome (or Edge):
 
 1. Open `chrome://extensions` (in Edge, `edge://extensions`).
 2. Switch on **Developer mode**.
-3. Click **Load unpacked** and pick the `extension` folder in this repository.
+3. Click **Load unpacked** and pick the `extension` folder from the zip (or from this repository).
+
+## Privacy
+
+Neither the app nor the extension collects, stores or sends any data. The app has no network code at all;
+it keeps its settings and a small log on your PC (`%APPDATA%\ZoomScroller`).
 
 ## How it works
 
-Windows lets programs inject touch input. Mouse Pinch watches the mouse and keyboard with low-level
+Windows lets programs inject touch input. ZoomScroller watches the mouse and keyboard with low-level
 hooks. On Ctrl + wheel over a Chromium page, it puts two virtual fingers on the page, with their
 midpoint on the cursor. Each wheel notch spreads the fingers apart or brings them together: a plain
 pinch about the cursor, which Chrome itself keeps still. Mouse motion moves both fingers together, and
@@ -84,7 +103,8 @@ After that:
 ## Build and test
 
 ```
-powershell -ExecutionPolicy Bypass -File build.ps1 -Tests     # bin\MousePinch.exe + test tools (csc from .NET Framework 4)
+powershell -ExecutionPolicy Bypass -File build.ps1 -Tests     # bin\ZoomScroller.exe + test tools (csc from .NET Framework 4)
+powershell -ExecutionPolicy Bypass -File build.ps1 -Release   # also dist\ZoomScroller-<version>.zip and the helper's store zip
 bin\engine_tests.exe                                         # engine against a model of Chrome's pinch handling
 python tests\mutation_check.py                               # every listed deliberate bug must make a test fail
 node tests\e2e_test.mjs                                      # real Chrome (throwaway profile), tagged SendInput
@@ -96,4 +116,5 @@ The live tests open their own Chrome window and move your cursor for about a min
 alone while they run. They only inject touch into their own test window (checked before every gesture),
 and they put the cursor back at the end. A `--test` instance of the app only obeys the tests' tagged input, never your real mouse.
 
-Settings: `%APPDATA%\MousePinch\settings.ini`. Log: `%APPDATA%\MousePinch\mousepinch.log`.
+Settings: `%APPDATA%\ZoomScroller\settings.ini`. Log: `%APPDATA%\ZoomScroller\zoomscroller.log`.
+Icons: `assets\make_icons.ps1` draws them.

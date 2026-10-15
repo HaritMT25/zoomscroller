@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace MousePinch
+namespace ZoomScroller
 {
     /// <summary>
     /// Turns wheel notches and mouse motion into one two-finger touch gesture, the way a touchpad pinch reaches Chrome.

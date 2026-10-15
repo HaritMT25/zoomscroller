@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace MousePinch
+namespace ZoomScroller
 {
     /// <summary>Engine behaviour against fake fingers feeding a model of Chrome's pinch handling.
     /// Run: bin\engine_tests.exe (exit code = failures).</summary>

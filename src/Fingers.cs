@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace MousePinch
+namespace ZoomScroller
 {
     public interface IFingers
     {

@@ -2,7 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace MousePinch
+namespace ZoomScroller
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct POINT { public int X, Y; public POINT(int x, int y) { X = x; Y = y; } }

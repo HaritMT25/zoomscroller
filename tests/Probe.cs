@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 
-namespace MousePinch
+namespace ZoomScroller
 {
     /// <summary>Test probe: scripted touch gestures at a screen point, only into a window whose title has a marker.
     ///   probe pinch MARKER cx cy span0 span1 ms

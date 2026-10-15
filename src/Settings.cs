@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 
-namespace MousePinch
+namespace ZoomScroller
 {
-    /// <summary>settings.ini in %APPDATA%\MousePinch: key=value lines.</summary>
+    /// <summary>settings.ini in %APPDATA%\ZoomScroller: key=value lines.</summary>
     public class Settings
     {
         public bool Enabled = true;
@@ -16,7 +16,7 @@ namespace MousePinch
 
         public static string Dir
         {
-            get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MousePinch"); }
+            get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ZoomScroller"); }
         }
         public static string FilePath { get { return Path.Combine(Dir, "settings.ini"); } }
 
@@ -61,7 +61,7 @@ namespace MousePinch
                 Directory.CreateDirectory(Dir);
                 File.WriteAllLines(FilePath, new[]
                 {
-                    "# Mouse Pinch settings (also changed from the tray menu)",
+                    "# ZoomScroller settings (also changed from the tray menu)",
                     "enabled=" + (Enabled ? "1" : "0"),
                     "# page zoom per wheel notch while Ctrl is held",
                     "zoom_per_notch=" + ZoomPerNotch.ToString(CultureInfo.InvariantCulture),
@@ -91,7 +91,7 @@ namespace MousePinch
                 try
                 {
                     Directory.CreateDirectory(Settings.Dir);
-                    string path = Path.Combine(Settings.Dir, "mousepinch.log");
+                    string path = Path.Combine(Settings.Dir, "zoomscroller.log");
                     var fi = new FileInfo(path);
                     if (fi.Exists && fi.Length > 256 * 1024) File.Delete(path);
                     File.AppendAllText(path, line + Environment.NewLine);

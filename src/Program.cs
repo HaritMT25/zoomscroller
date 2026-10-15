@@ -7,7 +7,7 @@ using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
-namespace MousePinch
+namespace ZoomScroller
 {
     static class Program
     {
@@ -21,7 +21,7 @@ namespace MousePinch
             Native.MakeDpiAware();
             Log.ToConsole = test;
             bool created;
-            using (new Mutex(true, test ? "Local\\MousePinch.test" : "Local\\MousePinch", out created))
+            using (new Mutex(true, test ? "Local\\ZoomScroller.test" : "Local\\ZoomScroller", out created))
             {
                 if (!created) { if (test) Console.WriteLine("already running"); return 1; }
                 Application.EnableVisualStyles();
@@ -34,7 +34,7 @@ namespace MousePinch
 
     class PinchApp : ApplicationContext
     {
-        const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run", RunName = "MousePinch";
+        const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run", RunName = "ZoomScroller";
         const int VK_LSHIFT = 0xA0, VK_RSHIFT = 0xA1, VK_LWIN = 0x5B, VK_RWIN = 0x5C;
 
         readonly bool test;
@@ -289,7 +289,7 @@ namespace MousePinch
         {
             var old = tray.Icon;
             tray.Icon = DrawIcon(settings.Enabled);
-            tray.Text = settings.Enabled ? "Mouse Pinch: Ctrl + wheel zooms the page" : "Mouse Pinch: off";
+            tray.Text = settings.Enabled ? "ZoomScroller: Ctrl + wheel zooms the page" : "ZoomScroller: off";
             if (old != null) { Native.DestroyIcon(old.Handle); old.Dispose(); }
         }
 
@@ -328,7 +328,7 @@ namespace MousePinch
                 "'extension' folder lifts that: chrome://extensions > Developer mode >\n" +
                 "Load unpacked.\n\n" +
                 "Settings: " + Settings.FilePath,
-                "Mouse Pinch", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                "ZoomScroller", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>Windows 11 hides new tray icons under the ^ overflow: show ours once, unless the user chose.</summary>

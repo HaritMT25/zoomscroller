@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace MousePinch
+namespace ZoomScroller
 {
     /// <summary>Can Windows synthesize touchpad (precision touchpad) pointers? Tries CreateSyntheticPointerDevice
     /// with each pointer type and reports what the system accepts. Injects nothing.</summary>
