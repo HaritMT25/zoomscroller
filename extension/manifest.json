@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Mouse Pinch helper",
+  "version": "1.0.0",
+  "description": "Lets Mouse Pinch zoom every page: pages can no longer block its (touch) pinch with CSS touch-action. Touchpad and mouse are unaffected.",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "css": ["touch.css"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ]
+}

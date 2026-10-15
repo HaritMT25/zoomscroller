@@ -11,9 +11,9 @@ const CHROME = process.env.CHROME || "C:\\Program Files\\Google\\Chrome\\Applica
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 export { sleep };
 
-export async function launch(port = 9461, extraArgs = []) {
+export async function launch(port = 9461, extraArgs = [], pageUrl = null) {
   const profile = mkdtempSync(join(tmpdir(), "pinch-chrome-"));
-  const url = pathToFileURL(join(here, "page.html")).href;
+  const url = pageUrl || pathToFileURL(join(here, "page.html")).href;
   const proc = spawn(CHROME, [`--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "--no-first-run",
     "--no-default-browser-check", "--disable-extensions", "--window-position=60,60", "--window-size=1000,700",
     ...extraArgs, url], { stdio: "ignore" });
@@ -22,7 +22,7 @@ export async function launch(port = 9461, extraArgs = []) {
     await sleep(200);
     try {
       const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
-      page = list.find(p => p.type === "page" && p.url.startsWith("file:"));
+      page = list.find(p => p.type === "page" && (pageUrl ? p.url.startsWith(pageUrl.slice(0, 20)) : p.url.startsWith("file:")));
     } catch { }
   }
   if (!page) throw new Error("test chrome did not come up");
@@ -37,11 +37,11 @@ export async function launch(port = 9461, extraArgs = []) {
     return r.result?.result?.value;
   };
   await cmd("Page.enable");
-  for (let i = 0; i < 50; i++) { if (await evaluate("typeof window.state === 'function'")) break; await sleep(100); }
+  for (let i = 0; i < 50 && !pageUrl; i++) { if (await evaluate("typeof window.state === 'function'")) break; await sleep(100); }
   const close = () => { try { ws.close(); } catch { } try { proc.kill(); } catch { }
     try { execFileSync("taskkill", ["/F", "/T", "/PID", String(proc.pid)], { stdio: "ignore" }); } catch { }
     setTimeout(() => { try { rmSync(profile, { recursive: true, force: true }); } catch { } }, 1500); };
-  return { cmd, evaluate, close, proc };
+  return { cmd, evaluate, close, proc, pid: proc.pid };
 }
 
 // Centre of the page viewport in physical screen pixels.

@@ -1,0 +1,4 @@
+/* Mouse Pinch zooms with two injected touchscreen fingers. Pages may forbid touch pinch-zoom with CSS touch-action
+   (YouTube does on its main grid); that only ever matters to touch input, so allow it everywhere. A real touchpad
+   pinch, the mouse and the keyboard don't look at touch-action. */
+*, *::before, *::after { touch-action: auto !important; }

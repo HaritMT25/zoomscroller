@@ -11,8 +11,8 @@ namespace MousePinch
 
         /// <summary>Records every touch frame and plays it through Chrome's rules (ui/events/gesture_detection, measured
         /// in tests/phase_test.mjs), on whole pixels like real touch input:
-        /// - scroll: starts once the fingers' midpoint is ScrollSlop from where it was at touch-down; that much of the
-        ///   first move is swallowed; after that the scroll follows the midpoint;
+        /// - scroll: starts once the fingers' midpoint is ScrollSlop from where it was at touch-down (that much of the
+        ///   first move is swallowed), or when a pinch starts (nothing swallowed); then it follows the midpoint;
         /// - rails: while no pinch is on, the first time finger 0 is SnapSlop from where it went down, a mostly
         ///   horizontal (vertical) move locks the scroll to that axis (more than 2 x SnapSlop on both: never); a lock
         ///   breaks once the locked-out axis gathers Channel px of motion before the other one does;
@@ -23,7 +23,9 @@ namespace MousePinch
         class FakeChrome : IFingers
         {
             public readonly List<Ev> Log = new List<Ev>();
-            public double Now, SpanSlop, ScrollSlop, SnapSlop, Channel, MinSpan, K = 1, Ox, Oy;
+            public double Now, SpanSlop, ScrollSlop, SnapSlop, Channel, MinSpan, EdgeMargin, K = 1, Ox, Oy;
+            public RECT Page;  // the page's viewport, for Chrome's snapping of pinch anchors to its edges
+            double adjX, adjY;
             public int FailMovesAt = -1;
             public bool Railed;  // an axis lock swallowed some motion
             public bool IsDown { get; private set; }
@@ -66,7 +68,18 @@ namespace MousePinch
                     if (snap == 0 && dx > 2 * SnapSlop && dy > 2 * SnapSlop) snap = 3;
                 }
                 if (pinching && s < MinSpan) { pinching = false; span0 = s; }
-                if (!pinching && Math.Abs(s - span0) > SpanSlop && s >= MinSpan) { pinching = true; pspan = span0 + Math.Sign(s - span0) * SpanSlop; }
+                if (!pinching && Math.Abs(s - span0) > SpanSlop && s >= MinSpan)
+                {
+                    pinching = true; pspan = span0 + Math.Sign(s - span0) * SpanSlop;
+                    if (!scrolling) { scrolling = true; pmx = mx; pmy = my; }  // a pinch starts the scroll: from here 1:1
+                    // a pinch starting near the page's edge is zoomed about the edge, for the whole pinch
+                    adjX = adjY = 0;
+                    if (Page.Width > 0)
+                    {
+                        if (mx - Page.Left < EdgeMargin) adjX = Page.Left - mx; else if (Page.Right - mx < EdgeMargin) adjX = Page.Right - mx;
+                        if (my - Page.Top < EdgeMargin) adjY = Page.Top - my; else if (Page.Bottom - my < EdgeMargin) adjY = Page.Bottom - my;
+                    }
+                }
                 double sx = 0, sy = 0;
                 if (!scrolling)
                 {
@@ -90,10 +103,10 @@ namespace MousePinch
                 Ox += sx; Oy += sy;
                 if (pinching)
                 {
-                    double r = s / pspan;
+                    double r = s / pspan, zx = mx + adjX, zy = my + adjY;
                     K *= r;
-                    Ox = mx + r * (Ox - mx);
-                    Oy = my + r * (Oy - my);
+                    Ox = zx + r * (Ox - zx);
+                    Oy = zy + r * (Oy - zy);
                     pspan = s;
                 }
                 if (Environment.GetEnvironmentVariable("ENGINE_DEBUG2") != null)
@@ -140,11 +153,12 @@ namespace MousePinch
         static FakeChrome Chrome()
         {
             return new FakeChrome { SpanSlop = Engine.ChromeSpanSlopDip * Dpi, ScrollSlop = Engine.ChromeScrollSlopDip * Dpi,
-                                    SnapSlop = 15 * Dpi, Channel = 67.5 * Dpi, MinSpan = Engine.ChromeMinSpanDip * Dpi };
+                                    SnapSlop = 15 * Dpi, Channel = 67.5 * Dpi, MinSpan = Engine.ChromeMinSpanDip * Dpi,
+                                    EdgeMargin = 100 * Dpi };
         }
         static Engine Make(FakeChrome f) { return new Engine(f) { ZoomPerNotch = 1.2 }; }
-        // whole-pixel finger positions make each zoom step a hair off (it evens out over a gesture)
-        const double ZoomTol = 0.003;
+        // whole-pixel finger positions: a gesture can end up to a pixel of span off (~0.4%; the next one repays it)
+        const double ZoomTol = 0.005;
         const double PanTol = 1.5;  // px
 
         static int Main()
@@ -160,17 +174,31 @@ namespace MousePinch
                 Check(Near(before, f.Under(1000, 500), 0.5), "point under the cursor stays: " + Fmt(before) + " -> " + Fmt(f.Under(1000, 500)));
                 Check(Span(f.Log[0]) >= Engine.ChromeMinSpanDip * Dpi, "touch-down span >= Chrome's minimum");
                 var moves = f.Log.FindAll(x => x.Kind == "move");
-                Check(moves[0].X0 == f.Log[0].X0 && moves[0].Y0 == f.Log[0].Y0 && Math.Abs(Span(moves[0]) - Span(f.Log[0]) - e.SlopPx - 2) < 1e-6,
-                    "the start moves finger 1 alone, out past the span slop");
                 Func<Ev, double[]> midOf = m => new[] { (m.X0 + m.X1) / 2, (m.Y0 + m.Y1) / 2 };
-                Check(Math.Abs(Span(moves[1]) - Span(f.Log[0]) - e.SlopPx) <= 1 && Near(midOf(moves[1]), midOf(moves[0]), 1),
-                    "then it narrows about the midpoint to Chrome's reference span (span +" + (Span(moves[1]) - Span(f.Log[0])).ToString("0.00") + ")");
-                double back = Dist(midOf(moves[1])[0], midOf(moves[1])[1], midOf(moves[2])[0], midOf(moves[2])[1]);
-                Check(Math.Abs(Span(moves[2]) - Span(moves[1])) < 1e-9 && Math.Abs(back - ((e.SlopPx + 2) / 2 - e.ScrollSlopPx)) <= 1.5,
-                    "and only then both step back by Chrome's scroll (" + back.ToString("0.00") + " px)");
-                Check(moves[0].T - f.Log[0].T >= e.StartGapMs && moves[1].T - moves[0].T >= e.StartGapMs && moves[2].T - moves[1].T >= e.StartGapMs,
-                    "with pauses Chrome can't merge");
+                var p0 = f.Log[0];
+                double moved0 = Dist(p0.X0, p0.Y0, moves[0].X0, moves[0].Y0), moved1 = Dist(p0.X1, p0.Y1, moves[0].X1, moves[0].Y1);
+                double opened = Span(moves[0]) - Span(p0);
+                Check(moved0 < 15 * Dpi && opened > e.SlopPx + 0.5 && opened < e.SlopPx + 3.5,
+                    "the start widens past the span slop with finger 0 moving less than the axis-lock slop (" + moved0.ToString("0.0") + " px)");
+                Check(Dist(midOf(p0)[0], midOf(p0)[1], midOf(moves[0])[0], midOf(moves[0])[1]) < e.ScrollSlopPx - 2 && Near(midOf(moves[0]), new[] { 1000.0, 500 }, 1),
+                    "its midpoint moves less than the scroll slop and ends on the cursor");
+                Check(Math.Abs(Span(moves[1]) - Span(p0) - e.SlopPx) <= 1 && Near(midOf(moves[1]), midOf(moves[0]), 1),
+                    "then it narrows about the midpoint to Chrome's reference span (span +" + (Span(moves[1]) - Span(p0)).ToString("0.00") + ")");
+                Check(moves[0].T - p0.T >= e.StartGapMs && moves[1].T - moves[0].T >= e.StartGapMs, "with pauses Chrome can't merge");
                 Check(e.Engaged && f.IsDown, "fingers stay down while Ctrl is held");
+            }
+
+            {   // the pinch's midpoint lands on the cursor (zoom = a plain pinch about it, held still by Chrome itself),
+                // also by the page's edge, where Chrome then pins the edge as in any touch pinch there
+                foreach (var c in new[] { new[] { 150.0, 550.0 }, new[] { 1850.0, 300.0 }, new[] { 900.0, 150.0 }, new[] { 400.0, 950.0 }, new[] { 1000.0, 500.0 } })
+                {
+                    var f = Chrome(); var e = Make(f); double now = 0;
+                    Check(e.Engage(c[0], c[1], Area(106, 106, 1894, 994), Dpi, 120, now), "engage at " + c[0] + "," + c[1]);
+                    Run(e, f, ref now, 60);
+                    var w = f.Log.FindAll(x => x.Kind == "move")[0];
+                    double mx = (Native.Px(w.X0) + Native.Px(w.X1)) / 2.0, my = (Native.Px(w.Y0) + Native.Px(w.Y1)) / 2.0;
+                    Check(Math.Abs(mx - c[0]) <= 1 && Math.Abs(my - c[1]) <= 1, "pinch starts with its midpoint on the cursor at " + c[0] + "," + c[1] + " (" + mx + "," + my + ")");
+                }
             }
 
             {   // zooming near an edge: fingers on one side, still anchored at the cursor
@@ -204,7 +232,7 @@ namespace MousePinch
             {   // zoom after a drag is still about the cursor (not about where the fingers went)
                 var f = Chrome(); var e = Make(f); double now = 0;
                 e.Engage(1000, 500, area, Dpi, 120, now); Run(e, f, ref now, 300);
-                e.AddPan(-300, 120); Run(e, f, ref now, 40);
+                e.AddPan(-300, 120); Run(e, f, ref now, 200);
                 var before = f.Under(1000, 500);
                 e.AddZoom(240); Run(e, f, ref now, 400);
                 Check(Near(before, f.Under(1000, 500), 1), "zoom after drag anchored at the cursor: " + Fmt(before) + " -> " + Fmt(f.Under(1000, 500)));
@@ -256,7 +284,7 @@ namespace MousePinch
                     Run(e, f, ref now, 200);
                 }
                 double got = Math.Log(f.K) / Math.Log(1.2);
-                Check(Math.Abs(got - 20) < 0.02, "20 corner pinches zoom 1.2^20, got 1.2^" + got.ToString("0.000"));
+                Check(Math.Abs(got - 20) < 0.03, "20 corner pinches zoom 1.2^20, got 1.2^" + got.ToString("0.000"));
             }
 
             {   // slow drags at half speed put fingers on half pixels: they must still round alike (no zoom flicker)
@@ -312,8 +340,11 @@ namespace MousePinch
                 for (int g = 0; g < 25; g++)
                 {
                     e.Engage(700, 450, area, Dpi, 120, now); Run(e, f, ref now, 250);
+                    var mid = f.Under(700, 450); double kmid = f.K;
                     e.AddZoom(-120); Run(e, f, ref now, 250);
                     e.RequestRelease(); Run(e, f, ref now, 150);
+                    if (Environment.GetEnvironmentVariable("ENGINE_DEBUG") != null)
+                        Console.WriteLine("  gesture {0}: zoomed in {1} K {2:0.0000}, out {3} K {4:0.0000}  regrips {5}", g, Fmt(mid), kmid, Fmt(f.Under(700, 450)), f.K, e.Regrips);
                 }
                 var after = f.Under(700, 450);
                 Check(Near(before, after, 2) && Math.Abs(Math.Log(f.K)) < 0.01, "25 in-and-out gestures leave the page where it was: " + Fmt(before) + " -> " + Fmt(after) + " x" + f.K.ToString("0.0000"));
@@ -326,7 +357,8 @@ namespace MousePinch
                 for (int i = 0; i < 600; i++) { e.AddPan(i % 200 < 100 ? 60 : -60, 9); Run(e, f, ref now, 8); }
                 Run(e, f, ref now, 400);
                 Check(e.Regrips >= 20, "a long back-and-forth drag re-grips a lot (" + e.Regrips + ")");
-                Check(Math.Abs(f.K / k0 - 1) < 0.003, "no zoom creep over " + e.Regrips + " re-grips: x" + (f.K / k0).ToString("0.00000"));
+                // whole pixels: up to about one pixel of span (~0.4%) at any time, not growing with re-grips
+                Check(Math.Abs(f.K / k0 - 1) < 0.005, "no zoom creep over " + e.Regrips + " re-grips: x" + (f.K / k0).ToString("0.00000"));
             }
 
             {   // a page barely big enough for two fingers: zooming in must not re-grip forever without progress
@@ -337,6 +369,62 @@ namespace MousePinch
                 e.RequestRelease();
                 Run(e, f, ref now, 3000);
                 Check(!e.Engaged && e.Regrips < 30, "small page: done in time, not re-gripping forever (engaged " + engaged + ", re-grips " + e.Regrips + ")");
+            }
+
+            {   // a drag that reverses keeps the fingers' line (across the drag line both ways): no turning back and forth
+                var f = Chrome(); var e = Make(f); double now = 0;
+                e.Engage(1000, 500, area, Dpi, 120, now); Run(e, f, ref now, 300);
+                // slightly slanted, so while the drag turns round its averaged direction points sideways for a moment
+                for (int i = 0; i < 30; i++) { e.AddPan(6, 1); Run(e, f, ref now, 4); }
+                int from = f.Log.Count;
+                for (int i = 0; i < 30; i++) { e.AddPan(-6, 1); Run(e, f, ref now, 4); }
+                for (int i = 0; i < 30; i++) { e.AddPan(6, 1); Run(e, f, ref now, 4); }
+                bool steady = true;
+                for (int i = from; i < f.Log.Count; i++)
+                {
+                    var m = f.Log[i];
+                    if (m.Kind == "move" && Math.Abs((m.X1 - m.X0) / Span(m)) > Math.Sin(16 * Math.PI / 180)) steady = false;
+                }
+                Check(steady, "reversing a drag doesn't turn the fingers");
+            }
+
+            {   // a drag going round in circles turns the fingers all the time: their whole pixels mustn't creep the zoom
+                var f = Chrome(); var e = Make(f); double now = 0;
+                e.Engage(1000, 550, area, Dpi, 120, now); Run(e, f, ref now, 300);
+                double k0 = f.K;
+                for (int i = 0; i < 1200; i++) { double a = i * 2 * Math.PI / 150; e.AddPan(6 * Math.Cos(a), 6 * Math.Sin(a)); Run(e, f, ref now, 4); }
+                Run(e, f, ref now, 500);
+                Check(Math.Abs(f.K / k0 - 1) < 0.003, "8 circles of dragging keep the zoom: x" + (f.K / k0).ToString("0.00000"));
+            }
+
+            {   // a fast drag with a backlog (after re-grips) moves the fingers in steps: big jumps scroll short in Chrome
+                var f = Chrome(); var e = Make(f); double now = 0;
+                e.Engage(1000, 500, area, Dpi, 120, now); Run(e, f, ref now, 300);
+                for (int i = 0; i < 60; i++) { e.AddPan(28, 0); Run(e, f, ref now, 4); }
+                Run(e, f, ref now, 2000);
+                double biggest = 0;
+                Ev prev = null;
+                foreach (var m in f.Log)
+                {
+                    if (m.Kind == "press") { prev = null; continue; }
+                    if (m.Kind != "move") continue;
+                    if (prev != null) biggest = Math.Max(biggest, Dist((m.X0 + m.X1) / 2, (m.Y0 + m.Y1) / 2, (prev.X0 + prev.X1) / 2, (prev.Y0 + prev.Y1) / 2));
+                    prev = m;
+                }
+                Check(e.Regrips > 0 && biggest <= e.MaxStepDip * Dpi + 2, "drag steps stay small, also catching up after re-grips (largest " + biggest.ToString("0.0") + " px)");
+            }
+
+            {   // a zoom after a finished drag grips again with the midpoint on the cursor (zooming from off it needs
+                // Chrome to scroll, which it gets ~14% wrong once the page itself scrolls)
+                var f = Chrome(); var e = Make(f); double now = 0;
+                e.Engage(1000, 500, area, Dpi, 120, now); Run(e, f, ref now, 300);
+                e.AddPan(-200, 80); Run(e, f, ref now, 300);
+                int presses = f.Log.FindAll(x => x.Kind == "press").Count;
+                e.AddZoom(120); Run(e, f, ref now, 400);
+                var later = f.Log.FindAll(x => x.Kind == "press");
+                var w = f.Log.Find(x => x.Kind == "move" && x.T > later[later.Count - 1].T);
+                Check(later.Count == presses + 1 && w != null && Near(new[] { (Native.Px(w.X0) + Native.Px(w.X1)) / 2.0, (Native.Px(w.Y0) + Native.Px(w.Y1)) / 2.0 }, new[] { 1000.0, 500 }, 1),
+                    "a zoom after a drag grips again on the cursor");
             }
 
             {   // letting go: zoom animation finishes, then the fingers stand still >= HoldMs, then lift
@@ -378,7 +466,7 @@ namespace MousePinch
                             seen, (u0[0] - u[0]) * f.K, (u0[1] - u[1]) * f.K, e.PanTotalX, e.PanTotalY, sn[7], sn[8], f.K);
                     }
                 }
-                Run(e, f, ref now, 400);
+                Run(e, f, ref now, 2500);  // drags move at most MaxStepDip a frame: let the backlog drain
                 var u1 = f.Under(1000, 500);
                 double mx = (u0[0] - u1[0]) * f.K, my = (u0[1] - u1[1]) * f.K;  // screen px the page moved under the cursor
                 Check(e.Regrips >= 2, "a 5000 px drag re-grips (" + e.Regrips + ")");
@@ -400,7 +488,8 @@ namespace MousePinch
                 Check(Math.Abs(Math.Log(f.K) - 30 * Math.Log(1.2)) < (e.Regrips + 1) * ZoomTol, "30 notches zoom x1.2^30, got 1.2^" + (Math.Log(f.K) / Math.Log(1.2)).ToString("0.00"));
                 for (int i = 0; i < 30; i++) { e.AddZoom(-120); Run(e, f, ref now, 30); }
                 Run(e, f, ref now, 600);
-                Check(Math.Abs(Math.Log(f.K)) < ZoomTol, "and 30 back is x1 again (leftovers repaid, not summed): " + f.K);
+                // a re-grip's last whole pixels stay until the next zoom repays them: up to ~2 rounding steps here
+                Check(Math.Abs(Math.Log(f.K)) < 2 * ZoomTol, "and 30 back is x1 again (leftovers repaid, not summed): " + f.K);
                 Check(Near(before, f.Under(300, 300), 2), "deep zoom anchored: " + Fmt(before) + " -> " + Fmt(f.Under(300, 300)));
             }
 

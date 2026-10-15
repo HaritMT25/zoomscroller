@@ -324,6 +324,9 @@ namespace MousePinch
                 "  Let go of Ctrl                      the page stays zoomed\n\n" +
                 "While zoomed, the plain wheel scrolls inside the zoomed view.\n" +
                 "Ctrl + plus / minus still change the browser's own zoom.\n\n" +
+                "Some sites (YouTube) block touch zoom. The helper extension in the\n" +
+                "'extension' folder lifts that: chrome://extensions > Developer mode >\n" +
+                "Load unpacked.\n\n" +
                 "Settings: " + Settings.FilePath,
                 "Mouse Pinch", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }

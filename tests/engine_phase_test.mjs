@@ -38,6 +38,7 @@ try {
     }
     await b.evaluate("scrollTo(0, 1200); 1"); await sleep(700);
   };
+  const scroll0 = async () => (await st()).sy;
   const report = async (name, x, y, script) => {
     await reset();
     const s0 = await st();
@@ -63,4 +64,12 @@ try {
   }
   if (which === "all" || which === "drag") await report("drag after zoom", ...cur, ["E 120", "W 300", "Q zoomed", "N 10 -27 -11 12", "W 150", "Q dragged", "Z 120", "W 400", "Q zoomed2", "R", "Q released"]);
   if (which === "all" || which === "long") await report("long drag", ...mid, ["E 120", "W 300", "Q zoomed", "N 25 -60 -16 10", "W 250", "Q dragged", "R", "Q released"]);
+  if (which === "long15") {
+    for (const [name, script] of [
+      ["15deg 1 grip", ["E 120", "W 300", "Q zoomed", "N 6 -60 -16 10", "W 250", "Q dragged", "R", "Q released"]],
+      ["15deg 3 grips", ["E 120", "W 300", "Q zoomed", "N 25 -77 -21 10", "W 250", "Q dragged", "R", "Q released"]],
+      ["vertical 3 grips", ["E 120", "W 300", "Q zoomed", "N 25 0 -40 10", "W 250", "Q dragged", "R", "Q released"]],
+      ["vertical chunks", ["E 120", "W 300", "Q zoomed", "N 8 0 -40 10", "W 300", "Q c1", "N 8 0 -40 10", "W 300", "Q c2", "N 9 0 -40 10", "W 300", "Q c3", "R", "Q released"]],
+    ].filter(([n]) => !process.env.ONLY || n.startsWith(process.env.ONLY))) await report(name, ...mid, script);
+  }
 } finally { b.close(); run("drive.exe", ["setcursor", saved[0], saved[1]]); }

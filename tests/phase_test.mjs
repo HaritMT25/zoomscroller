@@ -202,6 +202,43 @@ try {
           (rotate ? ` turn ${rt.map(v => v.toFixed(1))}` : "") + `  drag ${pct(dr[0], drag[0])},${pct(dr[1], drag[1])}  x${g("zoomed").s.scale.toFixed(3)}`);
       }
     }
+  } else if (which === "speed") {
+    // fingers across the drag (sideways fingers, vertical drag): overshoot vs speed, and endings that slow down
+    const seqv = (steps, ms, ending) => {
+      let a = [cx - 120, cy], c = [cx + 120, cy];
+      const f = [`P ${a[0]} ${a[1]} ${c[0]} ${c[1]}`, "S 30"];
+      a = [a[0] - 15, a[1]]; c = [c[0] + 24.5, c[1]]; f.push(`M ${a[0]} ${a[1]} ${c[0]} ${c[1]}`, "S 24");
+      a = [a[0] + 1, a[1]]; c = [c[0] - 1, c[1]]; f.push(`M ${a[0]} ${a[1]} ${c[0]} ${c[1]}`, "S 24");
+      const mx = (a[0] + c[0]) / 2;
+      for (let i = 0; i < 10; i++) { const k = Math.pow(1.2, 0.1); a = [mx + k * (a[0] - mx), a[1]]; c = [mx + k * (c[0] - mx), c[1]]; f.push(`M ${a[0]} ${a[1]} ${c[0]} ${c[1]}`); }
+      f.push("Q zoomed");
+      const total = -300;
+      let dys = Array(steps).fill(1);
+      if (ending === "ease") dys = [...Array(steps - 4).fill(1), 0.6, 0.35, 0.2, 0.1];
+      const sum = dys.reduce((x, y) => x + y, 0);
+      let first = true;
+      for (const d of dys) {
+        const extra = first && ending === "extra9" ? -9 : 0; first = false;
+        a = [a[0], a[1] + d * total / sum + extra]; c = [c[0], c[1] + d * total / sum + extra]; f.push(`M ${a[0]} ${a[1]} ${c[0]} ${c[1]}`, `S ${ms}`);
+      }
+      if (ending === "wiggle") for (let i = 0; i < 4; i++) f.push(`M ${a[0]} ${a[1] + 1} ${c[0]} ${c[1] + 1}`, "S 16", `M ${a[0]} ${a[1]} ${c[0]} ${c[1]}`, "S 16");
+      f.push("Q dragged", "H 6", "U", "Q lifted");
+      return f;
+    };
+    const runs = process.env.CASES === "steps"
+      ? [["6 steps of 50", 6, 8, "hold"], ["4 steps of 75", 4, 8, "hold"], ["3 steps of 100", 3, 8, "hold"], ["2 steps of 150", 2, 8, "hold"], ["10 steps of 30", 10, 8, "hold"]]
+      : process.env.CASES === "jumps"
+      ? [["one 300 jump", 1, 8, "hold"], ["10 steps, +9 first", 10, 8, "extra9"], ["10 steps", 10, 8, "hold"], ["one 300 jump, +9", 1, 8, "extra9"]]
+      : [["fast 10x2ms", 10, 2, "hold"], ["medium 10x8ms", 10, 8, "hold"], ["slow 10x30ms", 10, 30, "hold"],
+         ["fast, ease out", 10, 2, "ease"], ["fast, wiggle", 10, 2, "wiggle"], ["slow 30x10ms", 30, 10, "hold"]];
+    for (const [name, steps, ms, ending] of runs) {
+      await reset();
+      const reads = await phases(seqv(steps, ms, ending));
+      const z = reads.find(r => r.label === "zoomed"), d = reads.find(r => r.label === "dragged"), l = reads.find(r => r.label === "lifted");
+      if (!z || !d) { console.log(name, "no reads"); continue; }
+      const k = z.s.scale * z.s.dpr, uz = under(z.s), ud = under(d.s), ul = under(l.s);
+      console.log(`${name.padEnd(18)} drag -300: page moved ${((uz[1] - ud[1]) * k).toFixed(1)}  after lift ${((ud[1] - ul[1]) * k).toFixed(1)}  x${z.s.scale.toFixed(3)}`);
+    }
   } else if (which === "rapid") {
     for (const [name, axis] of [["sideways", [1, 0]], ["upright", [0, 1]]])
       for (const drag of [[-150, 0], [150, 0], [0, -150], [0, 150], [-270, -108]])
