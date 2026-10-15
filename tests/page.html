@@ -1,0 +1,23 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>PINCHTEST</title>
+<style>
+  body { margin: 0; font: 14px sans-serif; background: #fff; }
+  #grid { display: grid; grid-template-columns: repeat(20, 100px); }
+  #grid div { height: 100px; border: 1px solid #ccc; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
+  a { display: block; }
+</style></head>
+<body>
+<div id="grid"></div>
+<script>
+  const g = document.getElementById("grid");
+  for (let i = 0; i < 20 * 40; i++) { const d = document.createElement("div"); d.textContent = i; g.appendChild(d); }
+  window.loadId = Math.random();
+  window.clicks = 0; window.ctx = 0; window.touches = 0;
+  document.addEventListener("click", () => window.clicks++);
+  document.addEventListener("contextmenu", e => { window.ctx++; e.preventDefault(); });
+  document.addEventListener("touchstart", () => window.touches++, { passive: true });
+  window.state = () => ({ scale: visualViewport.scale, vx: visualViewport.offsetLeft, vy: visualViewport.offsetTop,
+    pl: visualViewport.pageLeft, pt: visualViewport.pageTop, loadId,
+    sx: scrollX, sy: scrollY, dpr: devicePixelRatio, clicks, ctx, touches, url: location.href });
+</script>
+</body></html>
